@@ -875,6 +875,7 @@ client.on('interactionCreate', async interaction => {
                 '`/sunucu-bilgi` → Sunucu hakkında detaylı bilgileri gösterir\n\n' +
 
                 '**EĞLENCE KOMUTLARI**\n' +
+                '`/ship [@kullanıcı]` → İki kullanıcı arasındaki uyumu ölçer\n' +
                 '`/sayisifirla` → Sayı saymaca oyununu sıfırlar\n' +
                 '`/kelimesifirla` → Kelime türetmece oyununu sıfırlar\n' +
                 '`/yazitura` → Yazı tura atar\n\n' +
@@ -1159,14 +1160,8 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: '❌ Kendinle ship yapamazsın!', ephemeral: true });
         }
         
-        // Ship yüzdesi hesapla (kullanıcı ID'lerine göre)
-        const combinedId = user1.id + targetUser.id;
-        let hash = 0;
-        for (let i = 0; i < combinedId.length; i++) {
-            hash = ((hash << 5) - hash) + combinedId.charCodeAt(i);
-            hash = hash & hash; // 32 bit integer
-        }
-        const shipPercentage = Math.abs(hash) % 101; // 0-100 arası
+        // Ship yüzdesi hesapla (rastgele)
+        const shipPercentage = Math.floor(Math.random() * 101); // 0-100 arası rastgele
         
         // Ship mesajı oluştur
         let shipMessage = '';
