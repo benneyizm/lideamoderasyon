@@ -155,7 +155,7 @@
                 .setDescription(`Merhaba **${user.tag}**!\n\n**Kategori:** ${category}\n**Açıklama:** ${categoryInfo.description}\n\n**Gereksinimler:** ${categoryInfo.requirements}\n\n**Lütfen sorununuzu detaylı bir şekilde açıklayın.**`)
                 .setColor(categoryInfo.color)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             // Kapatma butonu
             const closeButton = new ActionRowBuilder()
@@ -179,7 +179,8 @@
                 .setTitle('🆕 Yeni Ticket')
                 .setDescription(`**${user.tag}** tarafından **${category}** kategorisinde yeni bir ticket açıldı.\n\n**Kanal:** <#${ticketChannel.id}>\n**Kategori:** ${category}`)
                 .setColor(categoryInfo.color)
-                .setTimestamp();
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             await ticketChannel.send({ 
                 content: `<@&${supportRoleID}>`, 
@@ -213,7 +214,8 @@
                 .setTitle('🔒 Ticket Kapatıldı')
                 .setDescription(`Bu ticket **${user.tag}** tarafından kapatıldı.\n\n**Sebep:** ${reason}`)
                 .setColor('#ff0000')
-                .setTimestamp();
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             await channel.send({ embeds: [closeEmbed] });
             
@@ -517,7 +519,8 @@
                                     .setTitle('🎨 Renk Rolü Eklendi!')
                                     .setDescription(`**${renk.name}** rengi başarıyla eklendi!`)
                                     .setColor(renk.color)
-                                    .setTimestamp();
+                                    .setTimestamp()
+                                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
                                 
                                 await interaction.user.send({ embeds: [embed] });
                             } catch (error) {
@@ -576,7 +579,8 @@
                                     .setTitle('👤 Kayıt Tamamlandı!')
                                     .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.`)
                                     .setColor(0x00BFFF)
-                                    .setTimestamp();
+                                    .setTimestamp()
+                                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
                                 
                                 await interaction.user.send({ embeds: [embed] });
                             } catch (error) {
@@ -761,7 +765,7 @@
                     .setDescription(`**Yeni kazanan:** <@${yeniKazanan}>\n\nÇekiliş mesajı: [Tıkla](${mesaj.url})`)
                     .setColor(0x00ff00)
                     .setTimestamp()
-                    .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: client.user.displayAvatarURL() });
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
 
                 interaction.reply({ embeds: [embed], ephemeral: false });
 
@@ -835,7 +839,7 @@
                     { name: '🛡️ İçerik Filtresi', value: contentFilterLevels[explicitContentFilter] || 'Bilinmiyor', inline: true }
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
 
             // Sunucu banner'ı varsa ekle
             if (guild.bannerURL()) {
@@ -869,7 +873,7 @@
                     { name: '🟤 Kahverengi', value: 'Kahverengi renk rolü', inline: true },
                     { name: '💖 Pembe', value: 'Pembe renk rolü', inline: true }
                 )
-                .setFooter({ text: 'Renk seçmek için aşağıdaki butonlara tıklayın!' })
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() })
                 .setTimestamp();
 
 
@@ -966,7 +970,7 @@
                     { name: '👨 Erkek', value: 'Erkek cinsiyeti seçildi.', inline: true },
                     { name: '👩 Kadın', value: 'Kadın cinsiyeti seçildi.', inline: true }
                 )
-                .setFooter({ text: 'Cinsiyet seçmek için aşağıdaki butonlara tıklayın!' })
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() })
                 .setTimestamp();
 
             // Hemen interaction'a yanıt ver
@@ -1062,7 +1066,7 @@
                     '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n'
                 )
                 .setColor(0x3498db)
-                .setFooter({ text: 'Lidea Moderasyon Bot Yardım' });
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             return interaction.reply({ embeds: [embed], ephemeral: false });
         }
 
@@ -1250,7 +1254,7 @@
                 .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
                 .setColor(0x3498db)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: interaction.client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: interaction.client.user.displayAvatarURL() });
             
             interaction.reply({ embeds: [embed], ephemeral: false });
         }
@@ -1369,7 +1373,7 @@
                 .setThumbnail('https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif')
                 .setColor(0xff69b4)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: interaction.client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: interaction.client.user.displayAvatarURL() });
             
             interaction.reply({ embeds: [embed], ephemeral: false });
         }
@@ -1414,7 +1418,7 @@
                 .setColor(0xffd700)
                 .setThumbnail('https://cdn.discordapp.com/emojis/1101133526548660224.webp?size=96&quality=lossless')
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: interaction.client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: interaction.client.user.displayAvatarURL() });
             
             interaction.reply({ embeds: [embed], ephemeral: false });
         }
@@ -1478,7 +1482,7 @@
                 .setDescription('Aşağıdaki kategorilerden birini seçerek destek ekibimizle iletişime geçebilirsin.\n\n**Not:** Her kullanıcı aynı anda sadece bir ticket açabilir.')
                 .setColor('#00ff00')
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
 
             const row1 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -1525,7 +1529,7 @@
                 .setDescription(`**Bot Ping:** ${client.ws.ping}ms\n**API Latency:** ${Date.now() - interaction.createdTimestamp}ms`)
                 .setColor(0x00ff00)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             interaction.reply({ embeds: [embed], ephemeral: false });
         }
@@ -1545,7 +1549,7 @@
                 .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
                 .setColor(0xff6b35)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: member.client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: member.client.user.displayAvatarURL() });
             
             channel.send({ embeds: [embed] });
         }
@@ -1618,7 +1622,7 @@
                 .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
                 .setColor(0xff0000)
                 .setTimestamp()
-                .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: member.client.user.displayAvatarURL() });
+                .setFooter({ text: 'Created by benneyim', iconURL: member.client.user.displayAvatarURL() });
             
             try {
                 await channel.send({ embeds: [embed] });
