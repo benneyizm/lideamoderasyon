@@ -467,7 +467,7 @@
         }
         
         // Bot aktivitesini ayarla
-        client.user.setActivity("Twitch'te yayında", {
+        client.user.setActivity("Lidea Moderasyon /yardim", {
             type: 1,
             url: "https://www.twitch.tv/benneyiminyo"
         });
