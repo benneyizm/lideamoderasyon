@@ -2148,4 +2148,44 @@ client.on('guildMemberRemove', async (member) => {
 
 
 
+// BOM oyunu için değişkenler
+let bomCurrentNumber = 1;
+let bomChannelId = '1400487727774040174';
+let bomActive = true;
+
+// BOM oyunu için messageCreate eventi
+client.on('messageCreate', async message => {
+    // Sadece belirtilen kanalda ve bot mesajı değilse çalışsın
+    if (message.channel.id === bomChannelId && !message.author.bot && bomActive) {
+        const content = message.content.trim();
+        
+        // Doğru cevap kontrolü
+        let expectedAnswer;
+        if (bomCurrentNumber % 5 === 0) {
+            expectedAnswer = 'BOM';
+        } else {
+            expectedAnswer = bomCurrentNumber.toString();
+        }
+        
+        // Kullanıcının cevabını kontrol et
+        if (content === expectedAnswer) {
+            // Doğru cevap - devam et
+            bomCurrentNumber++;
+            
+            // 5'in katı olan sayılarda özel mesaj
+            if (bomCurrentNumber % 5 === 0) {
+                await message.react('✅');
+                await message.channel.send(`🎯 **Sıra:** ${bomCurrentNumber} - **BOM** yazmalısın!`);
+            }
+        } else {
+            // Yanlış cevap - oyunu sıfırla
+            await message.react('❌');
+            await message.channel.send(`💥 **OYUN SIFIRLANDI!**\n\n❌ **${message.author.username}** yanlış cevap verdi!\n\n📝 **Doğru cevap:** ${expectedAnswer}\n🎯 **Sıra:** ${bomCurrentNumber}\n\n🔄 **Oyun yeniden başlıyor!**`);
+            
+            // Oyunu sıfırla
+            bomCurrentNumber = 1;
+        }
+    }
+});
+
 client.login(TOKEN);
