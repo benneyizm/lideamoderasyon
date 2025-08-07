@@ -1520,7 +1520,7 @@ client.on('interactionCreate', async interaction => {
 
 
 
-// Otomatik hoşgeldin sistemi
+// Otomatik hoşgeldin sistemi ve davet takibi
 client.on('guildMemberAdd', async member => {
     const welcomeChannelId = '1399722587373830294';
     const channel = member.guild.channels.cache.get(welcomeChannelId);
@@ -1535,6 +1535,59 @@ client.on('guildMemberAdd', async member => {
             .setFooter({ text: 'Lidea Moderasyon Bot', iconURL: member.client.user.displayAvatarURL() });
         
         channel.send({ embeds: [embed] });
+    }
+    
+    // Davet takibi
+    try {
+        const guildId = member.guild.id;
+        const userId = member.user.id;
+        
+        // Davet verilerini kontrol et
+        if (!davetVerileri[guildId]) {
+            davetVerileri[guildId] = {};
+        }
+        
+        // Discord API'den davet bilgilerini al
+        try {
+            const invites = await member.guild.invites.fetch();
+            let davetEden = null;
+            let maxUses = 0;
+            
+            // En çok kullanılan davet linkini bul
+            for (const [code, invite] of invites) {
+                if (invite.uses > maxUses && invite.inviter) {
+                    maxUses = invite.uses;
+                    davetEden = invite.inviter.id;
+                }
+            }
+            
+            if (davetEden) {
+                // Davet verilerini kontrol et
+                if (!davetVerileri[guildId][davetEden]) {
+                    davetVerileri[guildId][davetEden] = {
+                        davet: 0,
+                        cikan: 0,
+                        fake: 0,
+                        davetEttikleri: []
+                    };
+                }
+                
+                // Davet edenin verilerini güncelle
+                davetVerileri[guildId][davetEden].davet += 1;
+                
+                if (!davetVerileri[guildId][davetEden].davetEttikleri) {
+                    davetVerileri[guildId][davetEden].davetEttikleri = [];
+                }
+                davetVerileri[guildId][davetEden].davetEttikleri.push(userId);
+            }
+        } catch (error) {
+            console.error('Davet eden bulunamadı:', error);
+        }
+        
+        saveDavet();
+        
+    } catch (error) {
+        console.error('Davet verileri güncellenirken hata:', error);
     }
 });
 
@@ -2083,60 +2136,7 @@ client.on('guildMemberRemove', async (member) => {
     }
 });
 
-// Kullanıcı katıldığında davet verilerini güncelle
-client.on('guildMemberAdd', async (member) => {
-    try {
-        const guildId = member.guild.id;
-        const userId = member.user.id;
-        
-        // Davet verilerini kontrol et
-        if (!davetVerileri[guildId]) {
-            davetVerileri[guildId] = {};
-        }
-        
-        // Discord API'den davet bilgilerini al
-        try {
-            const invites = await member.guild.invites.fetch();
-            let davetEden = null;
-            let maxUses = 0;
-            
-            // En çok kullanılan davet linkini bul
-            for (const [code, invite] of invites) {
-                if (invite.uses > maxUses && invite.inviter) {
-                    maxUses = invite.uses;
-                    davetEden = invite.inviter.id;
-                }
-            }
-            
-            if (davetEden) {
-                // Davet verilerini kontrol et
-                if (!davetVerileri[guildId][davetEden]) {
-                    davetVerileri[guildId][davetEden] = {
-                        davet: 0,
-                        cikan: 0,
-                        fake: 0,
-                        davetEttikleri: []
-                    };
-                }
-                
-                // Davet edenin verilerini güncelle
-                davetVerileri[guildId][davetEden].davet += 1;
-                
-                if (!davetVerileri[guildId][davetEden].davetEttikleri) {
-                    davetVerileri[guildId][davetEden].davetEttikleri = [];
-                }
-                davetVerileri[guildId][davetEden].davetEttikleri.push(userId);
-            }
-        } catch (error) {
-            console.error('Davet eden bulunamadı:', error);
-        }
-        
-        saveDavet();
-        
-    } catch (error) {
-        console.error('Davet verileri güncellenirken hata:', error);
-    }
-});
+
 
 
 
