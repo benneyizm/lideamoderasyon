@@ -536,6 +536,8 @@ client.on('interactionCreate', async interaction => {
                 'kayit_erkek': { name: 'Erkek', id: '1400903855889322124' },
                 'kayit_kadin': { name: 'Kadın', id: '1400780419137409095' }
             };
+            
+            const kayitsizRolId = '1400780414335057991';
 
             const cinsiyet = cinsiyetRolleri[buttonId];
             if (cinsiyet) {
@@ -552,6 +554,12 @@ client.on('interactionCreate', async interaction => {
                         }
                     }
                     
+                    // Kayıtsız rolünü kaldır
+                    const kayitsizRol = guild.roles.cache.get(kayitsizRolId);
+                    if (kayitsizRol && member.roles.cache.has(kayitsizRol.id)) {
+                        await member.roles.remove(kayitsizRol);
+                    }
+                    
                     // Yeni rolü ekle
                     const rol = guild.roles.cache.get(cinsiyet.id);
                     if (rol) {
@@ -561,7 +569,7 @@ client.on('interactionCreate', async interaction => {
                         try {
                             const embed = new EmbedBuilder()
                                 .setTitle('👤 Kayıt Tamamlandı!')
-                                .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!`)
+                                .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.`)
                                 .setColor(0x00BFFF)
                                 .setTimestamp();
                             
@@ -570,7 +578,7 @@ client.on('interactionCreate', async interaction => {
                             // DM kapalıysa sessizce geç
                         }
                         
-                        await interaction.reply({ content: `✅ **${cinsiyet.name}** rolü başarıyla eklendi!`, ephemeral: true });
+                        await interaction.reply({ content: `✅ **${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.`, ephemeral: true });
                     } else {
                         await interaction.reply({ content: `❌ Rol bulunamadı: ${cinsiyet.name}`, ephemeral: true });
                     }
