@@ -581,6 +581,37 @@ client.on('interactionCreate', async interaction => {
             }
             return;
         }
+        
+        // Ticket butonları
+        if (buttonId === 'create_ticket') {
+            await createTicket(interaction);
+            return;
+        }
+
+        if (buttonId === 'ticket_hesap') {
+            await createTicket(interaction, 'Kullanıcı Şikayet');
+            return;
+        }
+
+        if (buttonId === 'ticket_oneri') {
+            await createTicket(interaction, 'Öneriler');
+            return;
+        }
+
+        if (buttonId === 'ticket_cekilis') {
+            await createTicket(interaction, 'Çekiliş Ödülü');
+            return;
+        }
+
+        if (buttonId === 'ticket_diger') {
+            await createTicket(interaction, 'Diğer');
+            return;
+        }
+
+        if (buttonId === 'close_ticket') {
+            await closeTicket(interaction);
+            return;
+        }
     }
     
     if (!interaction.isChatInputCommand()) return;
@@ -1487,34 +1518,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Button interaction handler
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isButton()) return;
 
-    if (interaction.customId === 'create_ticket') {
-        await createTicket(interaction);
-    }
-
-    if (interaction.customId === 'ticket_hesap') {
-        await createTicket(interaction, 'Kullanıcı Şikayet');
-    }
-
-    if (interaction.customId === 'ticket_oneri') {
-        await createTicket(interaction, 'Öneriler');
-    }
-
-    if (interaction.customId === 'ticket_cekilis') {
-        await createTicket(interaction, 'Çekiliş Ödülü');
-    }
-
-    if (interaction.customId === 'ticket_diger') {
-        await createTicket(interaction, 'Diğer');
-    }
-
-    if (interaction.customId === 'close_ticket') {
-        await closeTicket(interaction);
-    }
-});
 
 // Otomatik hoşgeldin sistemi
 client.on('guildMemberAdd', async member => {
