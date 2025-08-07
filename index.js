@@ -370,6 +370,10 @@ const commands = [
         .setName('renk-rol')
         .setDescription('Renk rolleri sistemini aktif eder.')
         .addChannelOption(option => option.setName('kanal').setDescription('Renk rolleri kanalı').setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('kayıt-setup')
+        .setDescription('Kayıt sistemi kurulum mesajını gönderir.')
+        .addChannelOption(option => option.setName('kanal').setDescription('Kayıt kanalı').setRequired(true)),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -521,6 +525,57 @@ client.on('interactionCreate', async interaction => {
                     }
                 } catch (error) {
                     console.error('Renk rolü eklenirken hata:', error);
+                    await interaction.reply({ content: '❌ Rol eklenirken bir hata oluştu!', ephemeral: true });
+                }
+            }
+            return;
+        }
+        
+        if (buttonId.startsWith('kayit_')) {
+            const cinsiyetRolleri = {
+                'kayit_erkek': { name: 'Erkek', id: '1400903855889322124' },
+                'kayit_kadin': { name: 'Kadın', id: '1400780419137409095' }
+            };
+
+            const cinsiyet = cinsiyetRolleri[buttonId];
+            if (cinsiyet) {
+                try {
+                    const guild = interaction.guild;
+                    const member = interaction.member;
+                    
+                    // Önce eski cinsiyet rollerini kaldır
+                    const eskiCinsiyetRolleri = Object.values(cinsiyetRolleri).map(r => r.id);
+                    for (const rolId of eskiCinsiyetRolleri) {
+                        const rol = guild.roles.cache.get(rolId);
+                        if (rol && member.roles.cache.has(rol.id)) {
+                            await member.roles.remove(rol);
+                        }
+                    }
+                    
+                    // Yeni rolü ekle
+                    const rol = guild.roles.cache.get(cinsiyet.id);
+                    if (rol) {
+                        await member.roles.add(rol);
+                        
+                        // Kullanıcıya DM gönder
+                        try {
+                            const embed = new EmbedBuilder()
+                                .setTitle('👤 Kayıt Tamamlandı!')
+                                .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!`)
+                                .setColor(0x00BFFF)
+                                .setTimestamp();
+                            
+                            await interaction.user.send({ embeds: [embed] });
+                        } catch (error) {
+                            // DM kapalıysa sessizce geç
+                        }
+                        
+                        await interaction.reply({ content: `✅ **${cinsiyet.name}** rolü başarıyla eklendi!`, ephemeral: true });
+                    } else {
+                        await interaction.reply({ content: `❌ Rol bulunamadı: ${cinsiyet.name}`, ephemeral: true });
+                    }
+                } catch (error) {
+                    console.error('Cinsiyet rolü eklenirken hata:', error);
                     await interaction.reply({ content: '❌ Rol eklenirken bir hata oluştu!', ephemeral: true });
                 }
             }
@@ -850,6 +905,69 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
+    if (interaction.commandName === 'kayıt-setup') {
+        const yetkiliRolID = '1401227942498930760';
+        if (!interaction.member.roles.cache.has(yetkiliRolID)) {
+            return interaction.reply({ content: '❌ Bu komutu kullanmak için yetkin yok!', ephemeral: true });
+        }
+
+        const kanal = interaction.options.getChannel('kanal');
+        
+        // Kayıt sistemi embed'i oluştur
+        const embed = new EmbedBuilder()
+            .setTitle('👤 Kayıt Sistemi')
+            .setDescription('Aşağıdaki butonlara tıklayarak cinsiyetinizi seçebilirsiniz!\n\n**Cinsiyet Seçenekleri:**')
+            .setColor(0x00BFFF)
+            .addFields(
+                { name: '👨 Erkek', value: 'Erkek cinsiyeti seçildi.\n→ Gücünü belli et, yolun sert olacak.', inline: true },
+                { name: '👩 Kadın', value: 'Kadın cinsiyeti seçildi.\n→ Sessizliğinle sars, içindeki fırtınayı sal.', inline: true }
+            )
+            .setFooter({ text: 'Cinsiyet seçmek için aşağıdaki butonlara tıklayın!' })
+            .setTimestamp();
+
+        // Hemen interaction'a yanıt ver
+        try {
+            await interaction.deferReply({ ephemeral: true });
+        } catch (error) {
+            console.error('Interaction defer hatası:', error);
+        }
+        
+        // Cinsiyet butonlarını oluştur
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('kayit_erkek')
+                    .setLabel('👨 Erkek')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('kayit_kadin')
+                    .setLabel('👩 Kadın')
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+        // Kayıt mesajını oluştur
+        const kayitMesaji = await kanal.send({ 
+            embeds: [embed], 
+            components: [row] 
+        });
+        
+        // Kayıt mesajını sakla (gelecekte kullanmak için)
+        console.log(`Kayıt sistemi mesajı oluşturuldu: ${kayitMesaji.id}`);
+        
+        // Interaction'a yanıt ver
+        try {
+            await interaction.editReply({ content: `✅ Kayıt sistemi ${kanal} kanalında aktif edildi!` });
+        } catch (error) {
+            console.error('Interaction edit reply hatası:', error);
+            // Eğer interaction artık geçerli değilse, kanala mesaj gönder
+            try {
+                await kanal.send('✅ Kayıt sistemi aktif edildi!');
+            } catch (sendError) {
+                console.error('Kanal mesajı gönderilemedi:', sendError);
+            }
+        }
+    }
+
     if (interaction.commandName === 'status') {
         const yetkiliRolID = '1401227942498930760';
         if (!interaction.member.roles.cache.has(yetkiliRolID)) {
@@ -896,7 +1014,8 @@ client.on('interactionCreate', async interaction => {
                 '`/kilitaç` → Kanalı açar\n' +
                 '`/slowmode <saniye>` → Kanalın slowmode süresini ayarlar\n' +
                 '`/status <online/idle/dnd/invisible>` → Bot durumunu değiştirir\n' +
-                '`/renk-rol` → Renk rolleri sistemini aktif eder\n'
+                '`/renk-rol` → Renk rolleri sistemini aktif eder\n' +
+                '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n'
             )
             .setColor(0x3498db)
             .setFooter({ text: 'Lidea Moderasyon Bot Yardım' });
