@@ -919,8 +919,8 @@ client.on('interactionCreate', async interaction => {
             .setDescription('Aşağıdaki butonlara tıklayarak cinsiyetinizi seçebilirsiniz!\n\n**Cinsiyet Seçenekleri:**')
             .setColor(0x00BFFF)
             .addFields(
-                { name: '👨 Erkek', value: 'Erkek cinsiyeti seçildi.\n→ Gücünü belli et, yolun sert olacak.', inline: true },
-                { name: '👩 Kadın', value: 'Kadın cinsiyeti seçildi.\n→ Sessizliğinle sars, içindeki fırtınayı sal.', inline: true }
+                { name: '👨 Erkek', value: 'Erkek cinsiyeti seçildi.', inline: true },
+                { name: '👩 Kadın', value: 'Kadın cinsiyeti seçildi.', inline: true }
             )
             .setFooter({ text: 'Cinsiyet seçmek için aşağıdaki butonlara tıklayın!' })
             .setTimestamp();
