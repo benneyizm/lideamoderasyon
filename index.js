@@ -465,7 +465,12 @@
         } catch (err) {
             console.error('Bot sesli kanala katılamadı:', err);
         }
-        client.user.setStatus('idle');
+        
+        // Bot aktivitesini ayarla
+        client.user.setActivity("Twitch'te yayında", {
+            type: 1,
+            url: "https://www.twitch.tv/benneyiminyo"
+        });
     });
 
     client.on('interactionCreate', async interaction => {
