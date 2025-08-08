@@ -1054,6 +1054,7 @@
                     '**EKONOMİ KOMUTLARI**\n' +
                     '`.para` → Cüzdanındaki parayı gösterir\n' +
                     '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
+                    '`.çalış` → Çalışarak para kazanır (30 dakika cooldown)\n' +
                     '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n\n' +
 
                     '**EĞLENCE KOMUTLARI**\n' +
@@ -2104,7 +2105,7 @@
 
         // Ekonomi sistemi - Prefix'li komutlar (.komut)
         const prefix = '.';
-        if (!message.content.startsWith(prefix) || message.author.bot) return;
+        if (!message.content.startsWith(prefix) || message.author.bot || message.author.id === client.user.id) return;
 
         const args = message.content.slice(prefix.length).trim().split(/ +/);
         const command = args.shift().toLowerCase();
@@ -2112,7 +2113,21 @@
         // .para komutu
         if (command === 'para') {
             const userId = message.author.id;
+            const lastPara = ekonomiVerileri[userId]?.lastPara || 0;
+            const now = Date.now();
+            const paraCooldown = 5 * 1000; // 5 saniye
+
+            if (lastPara && (now - lastPara) < paraCooldown) {
+                return; // Cooldown süresinde tekrar çalışmasını engelle
+            }
+
             const userMoney = ekonomiVerileri[userId]?.money || 0;
+            
+            if (!ekonomiVerileri[userId]) {
+                ekonomiVerileri[userId] = {};
+            }
+            ekonomiVerileri[userId].lastPara = now;
+            saveEkonomi();
             
             const embed = new EmbedBuilder()
                 .setTitle('💰 Cüzdan')
@@ -2181,6 +2196,14 @@
         // .cf komutu (coinflip)
         if (command === 'cf') {
             const userId = message.author.id;
+            const lastCf = ekonomiVerileri[userId]?.lastCf || 0;
+            const now = Date.now();
+            const cfCooldown = 3 * 1000; // 3 saniye
+
+            if (lastCf && (now - lastCf) < cfCooldown) {
+                return; // Cooldown süresinde tekrar çalışmasını engelle
+            }
+
             const betAmount = parseInt(args[0]);
 
             if (!betAmount || betAmount <= 0) {
@@ -2221,6 +2244,7 @@
                 ekonomiVerileri[userId] = {};
             }
             ekonomiVerileri[userId].money = newBalance;
+            ekonomiVerileri[userId].lastCf = now;
             saveEkonomi();
 
             const embed = new EmbedBuilder()
@@ -2233,6 +2257,56 @@
                 )
                 .setColor(win ? 0x00ff00 : 0xff0000)
                 .setThumbnail(win ? 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif' : 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif')
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
+        }
+
+        // .çalış komutu
+        if (command === 'çalış') {
+            const userId = message.author.id;
+            const lastWork = ekonomiVerileri[userId]?.lastWork || 0;
+            const now = Date.now();
+            const workCooldown = 30 * 60 * 1000; // 30 dakika
+
+            if (lastWork && (now - lastWork) < workCooldown) {
+                const remainingTime = workCooldown - (now - lastWork);
+                const minutes = Math.floor(remainingTime / (60 * 1000));
+                const seconds = Math.floor((remainingTime % (60 * 1000)) / 1000);
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('⏰ Çalışma Zamanı')
+                    .setDescription(`❌ **${message.author.username}**, henüz çalışma zamanın gelmedi!`)
+                    .addFields(
+                        { name: '⏳ Kalan Süre', value: `**${minutes} dakika ${seconds} saniye**`, inline: true }
+                    )
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const reward = Math.floor(Math.random() * 200) + 100; // 100-300 arası rastgele
+            const currentMoney = ekonomiVerileri[userId]?.money || 0;
+            
+            if (!ekonomiVerileri[userId]) {
+                ekonomiVerileri[userId] = {};
+            }
+            ekonomiVerileri[userId].money = currentMoney + reward;
+            ekonomiVerileri[userId].lastWork = now;
+            saveEkonomi();
+
+            const embed = new EmbedBuilder()
+                .setTitle('💼 Çalışma Tamamlandı')
+                .setDescription(`✅ **${message.author.username}**, çalışman tamamlandı!`)
+                .addFields(
+                    { name: '💰 Kazanılan', value: `**${reward.toLocaleString()}** 💰`, inline: true },
+                    { name: '💵 Yeni Bakiye', value: `**${(currentMoney + reward).toLocaleString()}** 💰`, inline: true }
+                )
+                .setColor(0x00ff00)
                 .setTimestamp()
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
