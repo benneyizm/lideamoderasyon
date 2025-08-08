@@ -2523,11 +2523,62 @@
 
             const targetUser = message.mentions.users.first();
             const amount = parseInt(args[1]);
+            const isAll = args[0]?.toLowerCase() === 'all';
 
+            // All komutu için kontrol
+            if (isAll) {
+                if (!amount || amount <= 0) {
+                    const embed = new EmbedBuilder()
+                        .setTitle('❌ Hata')
+                        .setDescription('❌ Geçerli bir miktar belirtmelisin!\n\n**Kullanım:** `.para-ekle all <miktar>`')
+                        .setColor(0xff0000)
+                        .setTimestamp()
+                        .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                    
+                    message.reply({ embeds: [embed] });
+                    return;
+                }
+
+                // Sunucudaki tüm üyelere para ekle
+                const guild = message.guild;
+                const members = guild.members.cache.filter(member => !member.user.bot);
+                let addedCount = 0;
+                let totalAdded = 0;
+
+                for (const [memberId, member] of members) {
+                    if (!ekonomiVerileri[memberId]) {
+                        ekonomiVerileri[memberId] = {};
+                    }
+                    ekonomiVerileri[memberId].money = (ekonomiVerileri[memberId].money || 0) + amount;
+                    addedCount++;
+                    totalAdded += amount;
+                }
+
+                saveEkonomi();
+
+                const embed = new EmbedBuilder()
+                    .setTitle('💰 Toplu Para Eklendi')
+                    .setDescription(`✅ Sunucudaki **${addedCount}** kullanıcıya para eklendi!`)
+                    .addFields(
+                        { name: '👥 Etkilenen Kullanıcı', value: `**${addedCount}** kişi`, inline: true },
+                        { name: '💰 Kişi Başına Eklenen', value: `**${amount.toLocaleString()}** 💰`, inline: true },
+                        { name: '💵 Toplam Eklenen', value: `**${totalAdded.toLocaleString()}** 💰`, inline: true },
+                        { name: '👨‍💼 Ekleyen', value: `${message.author.tag}`, inline: true }
+                    )
+                    .setColor(0x00ff00)
+                    .setThumbnail(guild.iconURL({ dynamic: true, size: 256 }))
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            // Tek kullanıcıya para ekleme (eski sistem)
             if (!targetUser || !amount || amount <= 0) {
                 const embed = new EmbedBuilder()
                     .setTitle('❌ Hata')
-                    .setDescription('❌ Geçerli bir kullanıcı ve miktar belirtmelisin!\n\n**Kullanım:** `.para-ekle @kullanıcı <miktar>`')
+                    .setDescription('❌ Geçerli bir kullanıcı ve miktar belirtmelisin!\n\n**Kullanım:** `.para-ekle @kullanıcı <miktar>`\n**Toplu:** `.para-ekle all <miktar>`')
                     .setColor(0xff0000)
                     .setTimestamp()
                     .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
