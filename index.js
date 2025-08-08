@@ -2,6 +2,7 @@
     const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
     const express = require('express');
     const app = express();
+    const db = require('quick.db');
 
     app.get('/', (req, res) => {
     res.send('Bot aktif!');
@@ -1040,11 +1041,10 @@
                     '`/profil [@kullanıcı]` → Profil görmeyi sağlar\n' +
                     '`/sunucu-bilgi` → Sunucu hakkında detaylı bilgileri gösterir\n\n' +
 
-                    '**EĞLENCE KOMUTLARI**\n' +
-                    '`/ship [@kullanıcı]` → İki kullanıcı arasındaki uyumu ölçer\n' +
-                    '`/sayisifirla` → Sayı saymaca oyununu sıfırlar\n' +
-                    '`/kelimesifirla` → Kelime türetmece oyununu sıfırlar\n' +
-                    '`/yazitura` → Yazı tura atar\n\n' +
+                    '**EKONOMİ KOMUTLARI**\n' +
+                    '`.para` → Cüzdanındaki parayı gösterir\n' +
+                    '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
+                    '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n\n' +
 
                     '**YETKİLİ KOMUTLARI**\n' +
                     '`/sil <sayı>` → Mesaj siler (Yetki gerekli)\n' +
@@ -1063,7 +1063,12 @@
                     '`/slowmode <saniye>` → Kanalın slowmode süresini ayarlar\n' +
                     '`/status <online/idle/dnd/invisible>` → Bot durumunu değiştirir\n' +
                     '`/renk-rol` → Renk rolleri sistemini aktif eder\n' +
-                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n'
+                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n\n' +
+
+                    '**EKONOMİ KOMUTLARI**\n' +
+                    '`.para` → Cüzdanındaki parayı gösterir\n' +
+                    '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
+                    '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n'
                 )
                 .setColor(0x3498db)
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
@@ -2084,6 +2089,187 @@
                     console.error('Mesaj silinemedi:', error.message);
                 }
             }
+        }
+
+        // Ekonomi sistemi - Prefix'li komutlar (.komut)
+        const prefix = '.';
+        if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
+        const command = args.shift().toLowerCase();
+
+        // .para komutu
+        if (command === 'para') {
+            const userId = message.author.id;
+            const userMoney = db.get(`money_${userId}`) || 0;
+            
+            const embed = new EmbedBuilder()
+                .setTitle('💰 Cüzdan')
+                .setDescription(`**${message.author.username}** kullanıcısının cüzdanı`)
+                .addFields(
+                    { name: '💵 Bakiye', value: `**${userMoney.toLocaleString()}** 💰`, inline: true }
+                )
+                .setColor(0x00ff00)
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 256 }))
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
+        }
+
+        // .günlük komutu
+        if (command === 'günlük') {
+            const userId = message.author.id;
+            const lastDaily = db.get(`daily_${userId}`);
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000; // 24 saat
+
+            if (lastDaily && (now - lastDaily) < oneDay) {
+                const remainingTime = oneDay - (now - lastDaily);
+                const hours = Math.floor(remainingTime / (60 * 60 * 1000));
+                const minutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('⏰ Günlük Ödül')
+                    .setDescription(`❌ **${message.author.username}**, günlük ödülünü zaten aldın!`)
+                    .addFields(
+                        { name: '⏳ Kalan Süre', value: `**${hours} saat ${minutes} dakika**`, inline: true }
+                    )
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const reward = Math.floor(Math.random() * 1000) + 500; // 500-1500 arası rastgele
+            const currentMoney = db.get(`money_${userId}`) || 0;
+            db.set(`money_${userId}`, currentMoney + reward);
+            db.set(`daily_${userId}`, now);
+
+            const embed = new EmbedBuilder()
+                .setTitle('🎁 Günlük Ödül')
+                .setDescription(`✅ **${message.author.username}**, günlük ödülünü başarıyla aldın!`)
+                .addFields(
+                    { name: '💰 Kazanılan', value: `**${reward.toLocaleString()}** 💰`, inline: true },
+                    { name: '💵 Yeni Bakiye', value: `**${(currentMoney + reward).toLocaleString()}** 💰`, inline: true }
+                )
+                .setColor(0x00ff00)
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
+        }
+
+        // .cf komutu (coinflip)
+        if (command === 'cf') {
+            const userId = message.author.id;
+            const betAmount = parseInt(args[0]);
+
+            if (!betAmount || betAmount <= 0) {
+                const embed = new EmbedBuilder()
+                    .setTitle('❌ Hata')
+                    .setDescription('❌ Geçerli bir miktar belirtmelisin!\n\n**Kullanım:** `.cf <miktar>`')
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const currentMoney = db.get(`money_${userId}`) || 0;
+
+            if (betAmount > currentMoney) {
+                const embed = new EmbedBuilder()
+                    .setTitle('❌ Yetersiz Bakiye')
+                    .setDescription(`❌ **${message.author.username}**, yeterli paran yok!`)
+                    .addFields(
+                        { name: '💰 Mevcut Bakiye', value: `**${currentMoney.toLocaleString()}** 💰`, inline: true },
+                        { name: '🎯 Bahis Miktarı', value: `**${betAmount.toLocaleString()}** 💰`, inline: true }
+                    )
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            // %50 şans ile kazanma/kaybetme
+            const win = Math.random() < 0.5;
+            const newBalance = win ? currentMoney + betAmount : currentMoney - betAmount;
+            
+            db.set(`money_${userId}`, newBalance);
+
+            const embed = new EmbedBuilder()
+                .setTitle(win ? '🎉 Kazandın!' : '💔 Kaybettin!')
+                .setDescription(`${win ? '✅' : '❌'} **${message.author.username}**, ${win ? 'kazandın' : 'kaybettin'}!`)
+                .addFields(
+                    { name: '🎯 Bahis Miktarı', value: `**${betAmount.toLocaleString()}** 💰`, inline: true },
+                    { name: win ? '💰 Kazanılan' : '💸 Kaybedilen', value: `**${betAmount.toLocaleString()}** 💰`, inline: true },
+                    { name: '💵 Yeni Bakiye', value: `**${newBalance.toLocaleString()}** 💰`, inline: true }
+                )
+                .setColor(win ? 0x00ff00 : 0xff0000)
+                .setThumbnail(win ? 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif' : 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif')
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
+        }
+
+        // .para-ekle komutu (sadece yetkili kullanıcı)
+        if (command === 'para-ekle') {
+            // Sadece belirtilen kullanıcı ID'si kullanabilir
+            if (message.author.id !== '1082346923379400734') {
+                const embed = new EmbedBuilder()
+                    .setTitle('❌ Yetkisiz Erişim')
+                    .setDescription('❌ Bu komutu kullanma yetkin yok!')
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const targetUser = message.mentions.users.first();
+            const amount = parseInt(args[1]);
+
+            if (!targetUser || !amount || amount <= 0) {
+                const embed = new EmbedBuilder()
+                    .setTitle('❌ Hata')
+                    .setDescription('❌ Geçerli bir kullanıcı ve miktar belirtmelisin!\n\n**Kullanım:** `.para-ekle @kullanıcı <miktar>`')
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const targetUserId = targetUser.id;
+            const currentMoney = db.get(`money_${targetUserId}`) || 0;
+            const newBalance = currentMoney + amount;
+            
+            db.set(`money_${targetUserId}`, newBalance);
+
+            const embed = new EmbedBuilder()
+                .setTitle('💰 Para Eklendi')
+                .setDescription(`✅ **${targetUser.username}** kullanıcısına para eklendi!`)
+                .addFields(
+                    { name: '👤 Kullanıcı', value: `${targetUser.tag}`, inline: true },
+                    { name: '💰 Eklenen Miktar', value: `**${amount.toLocaleString()}** 💰`, inline: true },
+                    { name: '💵 Yeni Bakiye', value: `**${newBalance.toLocaleString()}** 💰`, inline: true },
+                    { name: '👨‍💼 Ekleyen', value: `${message.author.tag}`, inline: true }
+                )
+                .setColor(0x00ff00)
+                .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 256 }))
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
         }
     });
 
