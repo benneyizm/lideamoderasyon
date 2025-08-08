@@ -1055,7 +1055,8 @@
                     '`.para` → Cüzdanındaki parayı gösterir\n' +
                     '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
                     '`.çalış` → Çalışarak para kazanır (30 dakika cooldown)\n' +
-                    '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n\n' +
+                    '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n' +
+                    '`.para-top` → Sunucunun en zengin kullanıcılarını gösterir\n\n' +
 
                     '**EĞLENCE KOMUTLARI**\n' +
                     '`/ship [@kullanıcı]` → İki kullanıcı arasındaki uyumu ölçer\n' +
@@ -2307,6 +2308,80 @@
                     { name: '💵 Yeni Bakiye', value: `**${(currentMoney + reward).toLocaleString()}** 💰`, inline: true }
                 )
                 .setColor(0x00ff00)
+                .setTimestamp()
+                .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+            
+            message.reply({ embeds: [embed] });
+        }
+
+        // .para-top komutu
+        if (command === 'para-top') {
+            const userId = message.author.id;
+            const lastTop = ekonomiVerileri[userId]?.lastTop || 0;
+            const now = Date.now();
+            const topCooldown = 10 * 1000; // 10 saniye
+
+            if (lastTop && (now - lastTop) < topCooldown) {
+                return; // Cooldown süresinde tekrar çalışmasını engelle
+            }
+
+            // Tüm kullanıcıların parasını topla
+            const userMoneyList = [];
+            for (const [userId, data] of Object.entries(ekonomiVerileri)) {
+                if (data.money && data.money > 0) {
+                    try {
+                        const user = await client.users.fetch(userId);
+                        userMoneyList.push({
+                            userId: userId,
+                            username: user.username,
+                            tag: user.tag,
+                            money: data.money
+                        });
+                    } catch (error) {
+                        // Kullanıcı bulunamadıysa atla
+                        continue;
+                    }
+                }
+            }
+
+            // Paraya göre sırala (en yüksekten en düşüğe)
+            userMoneyList.sort((a, b) => b.money - a.money);
+
+            if (userMoneyList.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setTitle('💰 Para Sıralaması')
+                    .setDescription('❌ Henüz hiç kimsenin parası yok!')
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            // İlk 10 kullanıcıyı al
+            const topUsers = userMoneyList.slice(0, 10);
+            
+            // Cooldown'u kaydet
+            if (!ekonomiVerileri[message.author.id]) {
+                ekonomiVerileri[message.author.id] = {};
+            }
+            ekonomiVerileri[message.author.id].lastTop = now;
+            saveEkonomi();
+
+            // Embed oluştur
+            let description = '🏆 **Sunucunun En Zengin Kullanıcıları**\n\n';
+            
+            topUsers.forEach((user, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                description += `${medal} **${user.username}** - **${user.money.toLocaleString()}** 💰\n`;
+            });
+
+            const embed = new EmbedBuilder()
+                .setTitle('💰 Para Sıralaması')
+                .setDescription(description)
+                .setColor(0xffd700)
+                .setThumbnail('https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif')
                 .setTimestamp()
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
