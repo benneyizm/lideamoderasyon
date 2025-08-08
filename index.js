@@ -581,14 +581,22 @@
                         
                         // Yeni rolü ekle
                         const rol = guild.roles.cache.get(cinsiyet.id);
+                        const uyeRolId = '1398554266355892374';
+                        const uyeRol = guild.roles.cache.get(uyeRolId);
+                        
                         if (rol) {
                             await member.roles.add(rol);
+                            
+                            // Üye rolünü de ekle
+                            if (uyeRol) {
+                                await member.roles.add(uyeRol);
+                            }
                             
                             // Kullanıcıya DM gönder
                             try {
                                 const embed = new EmbedBuilder()
                                     .setTitle('👤 Kayıt Tamamlandı!')
-                                    .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.`)
+                                    .setDescription(`**${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.\nÜye rolü eklendi.`)
                                     .setColor(0x00BFFF)
                                     .setTimestamp()
                                     .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
@@ -598,7 +606,7 @@
                                 // DM kapalıysa sessizce geç
                             }
                             
-                            await interaction.reply({ content: `✅ **${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.`, ephemeral: true });
+                            await interaction.reply({ content: `✅ **${cinsiyet.name}** rolü başarıyla eklendi!\nKayıtsız rolü kaldırıldı.\nÜye rolü eklendi.`, ephemeral: true });
                         } else {
                             await interaction.reply({ content: `❌ Rol bulunamadı: ${cinsiyet.name}`, ephemeral: true });
                         }
@@ -1053,8 +1061,9 @@
 
                     '**EKONOMİ KOMUTLARI**\n' +
                     '`.para` → Cüzdanındaki parayı gösterir\n' +
-                    '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
-                    '`.çalış` → Çalışarak para kazanır (30 dakika cooldown)\n' +
+                    '`.günlük` → Günlük para ödülü alır (24 saat bekleme süresi)\n' +
+                    '`.çalış` → Çalışarak para kazanır (30 dakika bekleme süresi)\n' +
+                    '`.çal` → Başka kullanıcıdan para çalmaya çalışır (1 saat bekleme süresi)\n' +
                     '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n' +
                     '`.para-top` → Sunucunun en zengin kullanıcılarını gösterir\n\n' +
 
@@ -2312,6 +2321,115 @@
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             message.reply({ embeds: [embed] });
+        }
+
+        // .çal komutu (para çalma)
+        if (command === 'çal') {
+            const userId = message.author.id;
+            const lastSteal = ekonomiVerileri[userId]?.lastSteal || 0;
+            const now = Date.now();
+            const stealCooldown = 60 * 60 * 1000; // 1 saat
+
+            if (lastSteal && (now - lastSteal) < stealCooldown) {
+                const remainingTime = stealCooldown - (now - lastSteal);
+                const hours = Math.floor(remainingTime / (60 * 60 * 1000));
+                const minutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('⏰ Çalma Zamanı')
+                    .setDescription(`❌ **${message.author.username}**, henüz çalma zamanın gelmedi!`)
+                    .addFields(
+                        { name: '⏳ Kalan Süre', value: `**${hours} saat ${minutes} dakika**`, inline: true }
+                    )
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            // Rastgele bir kullanıcı seç
+            const allUsers = Object.keys(ekonomiVerileri).filter(id => 
+                ekonomiVerileri[id]?.money && ekonomiVerileri[id].money > 0 && id !== userId
+            );
+
+            if (allUsers.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setTitle('❌ Çalma Başarısız')
+                    .setDescription('❌ Çalabileceğin kimse yok!')
+                    .setColor(0xff0000)
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+                return;
+            }
+
+            const targetUserId = allUsers[Math.floor(Math.random() * allUsers.length)];
+            const targetMoney = ekonomiVerileri[targetUserId].money;
+            
+            // %30 şans ile başarılı çalma
+            const success = Math.random() < 0.3;
+            
+            if (success) {
+                // Başarılı çalma
+                const stolenAmount = Math.floor(targetMoney * 0.1); // %10'unu çal
+                const currentMoney = ekonomiVerileri[userId]?.money || 0;
+                
+                if (!ekonomiVerileri[userId]) {
+                    ekonomiVerileri[userId] = {};
+                }
+                ekonomiVerileri[userId].money = currentMoney + stolenAmount;
+                ekonomiVerileri[targetUserId].money = targetMoney - stolenAmount;
+                ekonomiVerileri[userId].lastSteal = now;
+                saveEkonomi();
+
+                try {
+                    const targetUser = await client.users.fetch(targetUserId);
+                    const embed = new EmbedBuilder()
+                        .setTitle('🦹‍♂️ Çalma Başarılı!')
+                        .setDescription(`✅ **${message.author.username}**, **${targetUser.username}**'den para çaldın!`)
+                        .addFields(
+                            { name: '💰 Çalınan Miktar', value: `**${stolenAmount.toLocaleString()}** 💰`, inline: true },
+                            { name: '💵 Yeni Bakiye', value: `**${(currentMoney + stolenAmount).toLocaleString()}** 💰`, inline: true },
+                            { name: '👤 Kurban', value: `${targetUser.tag}`, inline: true }
+                        )
+                        .setColor(0x00ff00)
+                        .setThumbnail('https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif')
+                        .setTimestamp()
+                        .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                    
+                    message.reply({ embeds: [embed] });
+                } catch (error) {
+                    message.reply({ content: '❌ Hedef kullanıcı bulunamadı!', ephemeral: true });
+                }
+            } else {
+                // Başarısız çalma - ceza
+                const penalty = Math.floor((ekonomiVerileri[userId]?.money || 0) * 0.05); // %5 ceza
+                const currentMoney = ekonomiVerileri[userId]?.money || 0;
+                
+                if (!ekonomiVerileri[userId]) {
+                    ekonomiVerileri[userId] = {};
+                }
+                ekonomiVerileri[userId].money = Math.max(0, currentMoney - penalty);
+                ekonomiVerileri[userId].lastSteal = now;
+                saveEkonomi();
+
+                const embed = new EmbedBuilder()
+                    .setTitle('🚔 Yakalandın!')
+                    .setDescription(`❌ **${message.author.username}**, çalma girişiminde yakalandın!`)
+                    .addFields(
+                        { name: '💸 Cezan', value: `**${penalty.toLocaleString()}** 💰`, inline: true },
+                        { name: '💵 Yeni Bakiye', value: `**${Math.max(0, currentMoney - penalty).toLocaleString()}** 💰`, inline: true }
+                    )
+                    .setColor(0xff0000)
+                    .setThumbnail('https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif')
+                    .setTimestamp()
+                    .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
+                
+                message.reply({ embeds: [embed] });
+            }
         }
 
         // .para-top komutu
