@@ -2,7 +2,21 @@
     const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
     const express = require('express');
     const app = express();
-    const db = require('quick.db');
+    const { joinVoiceChannel } = require('@discordjs/voice');
+    const fs = require('fs');
+    const path = require('path');
+    const https = require('https');
+    
+    // Ekonomi sistemi için JSON dosyası kullanacağız
+    const ekonomiPath = path.join(__dirname, 'ekonomi.json');
+    let ekonomiVerileri = {};
+    if (fs.existsSync(ekonomiPath)) {
+        ekonomiVerileri = JSON.parse(fs.readFileSync(ekonomiPath, 'utf8'));
+    }
+
+    function saveEkonomi() {
+        fs.writeFileSync(ekonomiPath, JSON.stringify(ekonomiVerileri, null, 2));
+    }
 
     app.get('/', (req, res) => {
     res.send('Bot aktif!');
@@ -11,10 +25,6 @@
     app.listen(3000, () => {
     console.log('Uptime için web sunucusu çalışıyor.');
     });
-    const { joinVoiceChannel } = require('@discordjs/voice');
-    const fs = require('fs');
-    const path = require('path');
-    const https = require('https');
     const istatistikPath = path.join(__dirname, 'istatistik.json');
     let istatistik = {};
     if (fs.existsSync(istatistikPath)) {
@@ -1046,6 +1056,12 @@
                     '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
                     '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n\n' +
 
+                    '**EĞLENCE KOMUTLARI**\n' +
+                    '`/ship [@kullanıcı]` → İki kullanıcı arasındaki uyumu ölçer\n' +
+                    '`/sayisifirla` → Sayı saymaca oyununu sıfırlar\n' +
+                    '`/kelimesifirla` → Kelime türetmece oyununu sıfırlar\n' +
+                    '`/yazitura` → Yazı tura atar\n\n' +
+
                     '**YETKİLİ KOMUTLARI**\n' +
                     '`/sil <sayı>` → Mesaj siler (Yetki gerekli)\n' +
                     '`/ban @kullanıcı [sebep]` → Kullanıcıyı banlar\n' +
@@ -1063,12 +1079,7 @@
                     '`/slowmode <saniye>` → Kanalın slowmode süresini ayarlar\n' +
                     '`/status <online/idle/dnd/invisible>` → Bot durumunu değiştirir\n' +
                     '`/renk-rol` → Renk rolleri sistemini aktif eder\n' +
-                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n\n' +
-
-                    '**EKONOMİ KOMUTLARI**\n' +
-                    '`.para` → Cüzdanındaki parayı gösterir\n' +
-                    '`.günlük` → Günlük para ödülü alır (24 saat cooldown)\n' +
-                    '`.cf <miktar>` → Yazı tura atar, %50 şans ile para kazanır/kaybeder\n'
+                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n'
                 )
                 .setColor(0x3498db)
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
@@ -2101,7 +2112,7 @@
         // .para komutu
         if (command === 'para') {
             const userId = message.author.id;
-            const userMoney = db.get(`money_${userId}`) || 0;
+            const userMoney = ekonomiVerileri[userId]?.money || 0;
             
             const embed = new EmbedBuilder()
                 .setTitle('💰 Cüzdan')
@@ -2120,7 +2131,7 @@
         // .günlük komutu
         if (command === 'günlük') {
             const userId = message.author.id;
-            const lastDaily = db.get(`daily_${userId}`);
+            const lastDaily = ekonomiVerileri[userId]?.lastDaily || 0;
             const now = Date.now();
             const oneDay = 24 * 60 * 60 * 1000; // 24 saat
 
@@ -2144,9 +2155,14 @@
             }
 
             const reward = Math.floor(Math.random() * 1000) + 500; // 500-1500 arası rastgele
-            const currentMoney = db.get(`money_${userId}`) || 0;
-            db.set(`money_${userId}`, currentMoney + reward);
-            db.set(`daily_${userId}`, now);
+            const currentMoney = ekonomiVerileri[userId]?.money || 0;
+            
+            if (!ekonomiVerileri[userId]) {
+                ekonomiVerileri[userId] = {};
+            }
+            ekonomiVerileri[userId].money = currentMoney + reward;
+            ekonomiVerileri[userId].lastDaily = now;
+            saveEkonomi();
 
             const embed = new EmbedBuilder()
                 .setTitle('🎁 Günlük Ödül')
@@ -2179,7 +2195,7 @@
                 return;
             }
 
-            const currentMoney = db.get(`money_${userId}`) || 0;
+            const currentMoney = ekonomiVerileri[userId]?.money || 0;
 
             if (betAmount > currentMoney) {
                 const embed = new EmbedBuilder()
@@ -2201,7 +2217,11 @@
             const win = Math.random() < 0.5;
             const newBalance = win ? currentMoney + betAmount : currentMoney - betAmount;
             
-            db.set(`money_${userId}`, newBalance);
+            if (!ekonomiVerileri[userId]) {
+                ekonomiVerileri[userId] = {};
+            }
+            ekonomiVerileri[userId].money = newBalance;
+            saveEkonomi();
 
             const embed = new EmbedBuilder()
                 .setTitle(win ? '🎉 Kazandın!' : '💔 Kaybettin!')
@@ -2250,10 +2270,14 @@
             }
 
             const targetUserId = targetUser.id;
-            const currentMoney = db.get(`money_${targetUserId}`) || 0;
+            const currentMoney = ekonomiVerileri[targetUserId]?.money || 0;
             const newBalance = currentMoney + amount;
             
-            db.set(`money_${targetUserId}`, newBalance);
+            if (!ekonomiVerileri[targetUserId]) {
+                ekonomiVerileri[targetUserId] = {};
+            }
+            ekonomiVerileri[targetUserId].money = newBalance;
+            saveEkonomi();
 
             const embed = new EmbedBuilder()
                 .setTitle('💰 Para Eklendi')
