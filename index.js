@@ -11,11 +11,24 @@
     const ekonomiPath = path.join(__dirname, 'ekonomi.json');
     let ekonomiVerileri = {};
     if (fs.existsSync(ekonomiPath)) {
-        ekonomiVerileri = JSON.parse(fs.readFileSync(ekonomiPath, 'utf8'));
+        try {
+            ekonomiVerileri = JSON.parse(fs.readFileSync(ekonomiPath, 'utf8'));
+            console.log('Ekonomi verileri başarıyla yüklendi:', Object.keys(ekonomiVerileri).length, 'kullanıcı');
+        } catch (error) {
+            console.error('Ekonomi verileri yüklenirken hata:', error);
+            ekonomiVerileri = {};
+        }
+    } else {
+        console.log('Ekonomi dosyası bulunamadı, yeni dosya oluşturulacak');
     }
 
     function saveEkonomi() {
-        fs.writeFileSync(ekonomiPath, JSON.stringify(ekonomiVerileri, null, 2));
+        try {
+            fs.writeFileSync(ekonomiPath, JSON.stringify(ekonomiVerileri, null, 2));
+            console.log('Ekonomi verileri başarıyla kaydedildi:', ekonomiPath);
+        } catch (error) {
+            console.error('Ekonomi verileri kaydedilirken hata:', error);
+        }
     }
 
     app.get('/', (req, res) => {
@@ -2135,6 +2148,8 @@
             
             if (!ekonomiVerileri[userId]) {
                 ekonomiVerileri[userId] = {};
+                // Yeni kullanıcıya başlangıç parası ver
+                ekonomiVerileri[userId].money = 1000;
             }
             ekonomiVerileri[userId].lastPara = now;
             saveEkonomi();
@@ -2184,6 +2199,8 @@
             
             if (!ekonomiVerileri[userId]) {
                 ekonomiVerileri[userId] = {};
+                // Yeni kullanıcıya başlangıç parası ver
+                ekonomiVerileri[userId].money = 1000;
             }
             ekonomiVerileri[userId].money = currentMoney + reward;
             ekonomiVerileri[userId].lastDaily = now;
@@ -2505,6 +2522,8 @@
             
             message.reply({ embeds: [embed] });
         }
+
+
 
         // .para-ekle komutu (sadece yetkili kullanıcı)
         if (command === 'para-ekle') {
