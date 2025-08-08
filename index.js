@@ -2128,10 +2128,9 @@
 
         // Ekonomi sistemi - Prefix'li komutlar (.komut)
         const prefix = '.';
-        if (!message.content.startsWith(prefix) || message.author.bot || message.author.id === client.user.id) return;
-
-        const args = message.content.slice(prefix.length).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
+        if (message.content.startsWith(prefix) && !message.author.bot && message.author.id !== client.user.id) {
+            const args = message.content.slice(prefix.length).trim().split(/ +/);
+            const command = args.shift().toLowerCase();
 
         // .para komutu
         if (command === 'para') {
@@ -2631,6 +2630,7 @@
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
             
             message.reply({ embeds: [embed] });
+        }
         }
     });
 
